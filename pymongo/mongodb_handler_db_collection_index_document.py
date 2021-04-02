@@ -5,7 +5,6 @@ mongo = pymongo.MongoClient(host='192.168.111.133', port=27017, tz_aware=True)
 
 def handler_db():
     """操作数据库"""
-
     #创建或选择数据库
     db=mongo.get_database('sxt')
     #或
