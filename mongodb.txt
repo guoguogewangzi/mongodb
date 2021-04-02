@@ -382,7 +382,7 @@ db.user.find({
     "addr.country":"China"
     })
 	
-排序:
+8，排序:
 1）查询结果name正序排序
 db.user.find().sort({"name":1})
 
@@ -392,8 +392,7 @@ db.user.find().sort({"name":-1})
 3）查询结果按年龄倒序排序，然后再按id倒序排序（相同年龄的）
 db.user.find().sort({"age":-1,"_id":-1})
 
-
-分页：
+9，分页：
 1）显示前两个
 db.user.find().limit(2)
 
@@ -403,7 +402,7 @@ db.user.find().limit(2).skip(2) 或 db.user.find().skip(2).limit(2)
 3）分页公式：
 db.user.find().skip((pageNum-1)*pageSize).limit(pageSize)
 
-统计：
+10，统计：
 1）查询id>3的个数
 方式一：
 db.user.count({
