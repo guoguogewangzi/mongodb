@@ -16,7 +16,7 @@ def handler_db():
     #删除数据库
     mongo.drop_database(db)   #或mongo.drop_database('sxt')
 
-    #获取数据库
+    #获取数据库名称
     print(mongo.list_database_names())
 
 def handler_collection():
@@ -28,15 +28,12 @@ def handler_collection():
     col=db.create_collection("col")
     #或
     #col = db.col
-
     print('创建的集合：',col)
 
     #获取一个集合
-
     col= db.get_collection("col")
-    # 或
+    #或
     #col=db.col
-
     print("获取的集合：",col)
 
     #获取所有集合名称
