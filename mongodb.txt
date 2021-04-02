@@ -1,0 +1,626 @@
+Mongodb基础教程
+
+P1 mongo安装
+
+
+服务端:
+mkdir /data/mongo/
+docker run --name mymongo -v /data/mongo/:/data/db -d --rm -p 27017:27017 mongo:latest
+
+
+客户端:
+1.下载二进制压缩包
+官网下载地址：https://www.mongodb.com/try/download/community
+版本:
+平台:
+package:tgz
+
+
+2.解压压缩包
+tar zxvf mongodb-linux-x86_64-rhel70-3.4.24.tgz
+
+
+3.添加PATH: 将mongo命令加到系统命令
+vim /etc/profile
+#文件末尾添加
+export PATH=/usr/local/mongodb4/bin:$PATH
+
+#执行使环境变量生效
+source /etc/profile
+
+查看是否修改成功
+echo $PATH
+
+PS:此方法对所有用户永久有效，并windows的path概念一样
+参考：https://blog.csdn.net/u011095110/article/details/83660423
+
+4.连接服务器
+systemctl stop 	iptables
+systemctl stop firewalld.service
+./mongo 127.0.0.1
+
+
+常用工具如下：
+MongoDB客户端:mongo
+MongoDB服务端:mongod
+数据导出工具:mongoexport
+数据导入工具:mongoimport
+
+
+P2 002MongoDB写操作
+
+概念：
+sql术语--Mongodb术语
+database--database--数据库
+table--collection--数据库表/集合
+row--document--数据行/文档
+column--field--数据列/字段
+index--index--索引
+table joins---空--表连接，MongoDB不支持
+primary key--primary key--主键，MongDB自动将_id字段设置为主键
+
+命令：同样studio 3T 里的单击集合/表弹出的黑框框输入命令，ctrl + 回车执行
+
+显示所有库
+show dbs
+
+显示当前库
+db
+
+切换数据库
+use test
+
+插入数据
+db.test.insert({"username":"zhangsan"})
+
+删除当前数据库
+db.dropDatabase()
+
+创建集合/表(不建议直接创建集合，一般直接插入数据)
+db.createCollection('tabletest')
+
+删除集合/表
+db.table1.drop()
+
+显示所有集合/表
+show collections
+
+增加：
+---------------------------------------------
+插入数据insert:
+user0 = {
+    "name":"zhangsan",
+    "age":18,
+    "hobbies":["music","read"],
+    "addr":{
+        "country":"China",
+        "city":"BJ"
+        }
+    }
+db.user.insert(user0)
+
+
+批量插入insertMany：
+
+user1 = {
+	"_id":1,
+    "name":"zhangsan",
+    "age":18,
+    "hobbies":["music","read"],
+    "addr":{
+        "country":"China",
+        "city":"BJ"
+        }
+    }
+
+user2 = {
+	"_id":2,
+    "name":"lisi",
+    "age":18,
+    "hobbies":["music","read"],
+    "addr":{
+        "country":"China",
+        "city":"BJ"
+        }
+    }
+db.user.insertMany([user1,user2])
+---------------------------------------------
+
+
+
+删除：
+---------------------------------------------
+删除remove():justOne：true只删除一条，否则删除所有已查询
+db.user.remove({"name":"lisi"},{justOne:true})
+db.user.remove({"name":"lisi"})
+db.user.remove({}) 等价于 db.user.deleteMany({})
+---------------------------------------------
+
+
+
+
+修改:
+---------------------------------------------
+更新save:通过传入的文档来替换已有文档，_id 主键存在就更新，不存在就插入
+
+user1 = {
+	"_id":7,
+    "name":"zhangsan",
+    "age":18,
+    "hobbies":["music","read"],
+    "addr":{
+        "country":"China",
+        "city":"BJ"
+        }
+    }
+db.user.save(user1)
+
+
+更新update：
+语法：
+db.collection.update(
+   <条件>,
+   <更新值>,
+   {
+     upsert: <boolean>,
+     multi: <boolean>,
+     writeConcern: <document>
+   }
+)
+
+1）修改name:lishi为name:lisi666
+user = {
+    $set:{"name":"lisi666"}
+    }
+db.user.update({"name":"lisi"},user)
+
+2）所有的年龄都+10
+db.user.update(
+
+{},{$inc:{"age":10}},{"multi":true}
+
+)
+
+---------------------------------------------
+
+
+P3 003查询：
+---------------------------------------------
+查询find：
+
+查询所有：
+db.user.find() 或 db.user.find({})
+
+去重查询：
+db.user.distinct("name")
+
+格式化查询：
+db.user.find().pretty()
+
+
+1，比较运算：
+= ,!= ('$ne') , > ('$gt') ,< ('$lt'), >= ('$gte'),<= ('$lte')
+
+1）查询id=3
+db.user.find({"_id":3})
+
+2）查询id!=3:
+db.user.find({_id:{$ne:3}})
+
+3）查询id>3:
+db.user.find({_id:{$gt:3}})
+
+4）查询id<3:
+db.user.find({_id:{$lt:3}})
+
+5）查询id>=3:
+db.user.find({_id:{$gte:3}})
+
+6）查询id<=3:
+db.user.find({_id:{$lte:3}})
+
+2，逻辑运算：
+
+AND 条件：
+1）查询id>=3 and id<=4:
+db.user.find({
+"_id":{$gte:3,$lte:4}
+})
+
+2）查询id>=3 and id<=4 and age>=18
+db.user.find(
+{
+  "_id":{$gte:3,$lte:4},
+  "age":{$gte:18}
+
+})
+或
+
+db.user.find({
+    "$and":[
+        {"_id":{$gte:3,$lte:4}},
+        {"age":{$gte:18}}
+    
+    ]
+ })
+
+OR 条件：
+
+1）查询id>=0 and id<=1 or id<=4 or name=xuyihang：
+db.user.find({
+    $or:[
+    {"_id":{$gte:0,$lte:1}},
+    {"_id":{$lte:4}},
+    {"name":"xuyihang"}
+    ]   
+})
+
+NOT 条件：
+1）查询 id%2 = 1 :
+db.user.find({
+    "_id":{$mod:[2,1]}
+    })
+ 
+2)上一条取反： 
+db.user.find({
+    "_id":{$not:{$mod:[2,1]}}
+})
+
+
+
+3，成员运算：查询比较多
+成员运算无非是in 和 not in ,MongDB中形式为$in,$nin
+
+1）查询age in [18,2,3]范围的行/文档:
+db.user.find({
+    "age":{$in:[18,2,3]}   
+    })
+
+2）查询age not in [18,2,3]范围的行/文档:
+db.user.find({
+    "age":{$nin:[18,2,3]}   
+})
+
+4，$type操作符：
+Double--1
+String--2	 
+Object--3	 
+Array--4	 
+Binary data--5	 
+Undefined--6--已废弃。
+Object id--7	 
+Boolean--8	 
+Date--9	 
+Null--10	 
+Regular Expression--11	 
+JavaScript--13	 
+Symbol--14	 
+JavaScript (with scope)--15	 
+32-bit integer--16	 
+Timestamp--17	 
+64-bit integer--18	 
+Min key--255
+Max key--127	 
+
+1）查询name 是 string 格式的:
+db.user.find({
+    "name":{$type:2}
+})
+
+2)查询id 是 string 格式的:
+db.user.insert({
+"_id":"7",
+"name":"xiaoqi"
+})
+db.user.find({
+    "_id":{$type:2}
+})
+
+5，正则：
+
+1）查询 name:/开头z + 任意字符 + 0个或多个 + 0个或1个 + n或i结尾的/正则表达式
+db.user.find({
+    "name":/^z.*?(n|i)$/   
+    })
+
+
+
+6，投影：多加一个文档{}，1-显示，0-隐藏
+1）查询name:lihua,并且不显示id,显示name和age,
+db.user.find(
+    {"name":"lihua"},
+    {"_id":0,"name":1,"age":1}
+)
+2）例2
+db.user.find({
+    "name":/^z.*?(n|i)$/   
+    },
+    {"_id":0,"name":1,"age":1}
+)
+
+7，数组
+
+1）查询列表hobbies:值包含read
+db.user.find({
+    "hobbies":"read"
+    })
+	
+2）查询hobbies既有read又有music的
+db.user.find({
+    "hobbies":{$all:["read","music"]}
+    })
+	
+3）查询索引hobbies.1为read的
+db.user.find({
+    "hobbies.1":"read"
+    })
+	
+4）查询所有人索引0到2的hobbies,第一个{}表示查询所有，第二个是显示条件
+db.user.find({},
+{
+       "_id":0,
+       "name":0,
+       "age":0,
+       "addr":0,
+        "hobbies":{$slice:[0,2]}
+
+    })
+	
+5）查询所有人最后两个hobbies,第一个表示{}表示查询所有,第二个是显示条件
+db.user.find({},
+{
+    "_id":0,
+    "name":0,
+    "age":0,
+    "addr":0,
+    "hobbies":{$slice:-2},
+    }
+)
+
+6）查询子文档有"country":"China"的人
+db.user.find({
+    "addr.country":"China"
+    })
+	
+排序:
+1）查询结果name正序排序
+db.user.find().sort({"name":1})
+
+2）查询结果name倒序排序
+db.user.find().sort({"name":-1})
+
+3）查询结果按年龄倒序排序，然后再按id倒序排序（相同年龄的）
+db.user.find().sort({"age":-1,"_id":-1})
+
+
+分页：
+1）显示前两个
+db.user.find().limit(2)
+
+2）跳过前2个显示后续的2个
+db.user.find().limit(2).skip(2) 或 db.user.find().skip(2).limit(2)
+
+3）分页公式：
+db.user.find().skip((pageNum-1)*pageSize).limit(pageSize)
+
+统计：
+1）查询id>3的个数
+方式一：
+db.user.count({
+    "_id":{$gt:3}
+    })
+
+方式二：
+db.user.find({ 
+    "_id":{$gt:3}
+    }).count()
+
+---------------------------------------------
+
+
+
+
+P4 004聚合查询：
+---------------------------------------------
+测试数据
+emp1={"_id":1,"name":"武大郎","sex":"male","age":18,"hire_date":"20170301","post":"烧贷检察官","salary":7300.33}
+emp2={"_id":2,"name":"武松","sex":"male","age":78,"hire_date":"20150302","post":"公务员","salary":71000000.31}
+emp3={"_id":3,"name":"宋江","sex":"male","age":81,"hire_date":"20130305","post":"公务员","salary":78300}
+emp4={"_id":4,"name":"林冲","sex":"male","age":73,"hire_date":"20140701","post":"公务员","salary":73500}
+emp5={"_id":5,"name":"林冲","sex":"male","age":73,"hire_date":"20140701","post":"公务员","salary":73500}
+emp6={"_id":6,"name":"柴进","sex":"male","age":28,"hire_date":"20121101","post":"公务员","salary":72100}
+emp7={"_id":7,"name":"卢俊义","sex":"female","age":18,"hire_date":"20110211","post":"公务员","salary":79000}
+emp8={"_id":8,"name":"高俅","sex":"male","age":18,"hire_date":"19000301","post":"公务员","salary":730000} 
+emp9={"_id":9,"name":"鲁智深","sex":"male","age":48,"hire_date":"20101111","post":"公条员","salary":710000}
+emp10={"_id":10,"name":"史进","sex":"female","age":48,"hire_date":"20150311","post":"打手","salary":73000.13}
+emp11={"_id":11,"name":"李逵","sex":"female","age":38,"hire_date":"20101101","post":"打手","salary":72000.35}
+emp12={"_id":12,"name":"周通","sex":"female","age":18,"hire_date":"20110312","post":"打手","salary":71000.37} 
+emp13={"_id":13,"name":"石秀","sex":"female","age":18,"hire_date":"20160513","post":"打手","salary":73000.29}
+emp14={"_id":14,"name":"李忠","sex":"female","age":28,"hire_date":"20170127","post":"打手","salary":74000.33}
+emp15={"_id":15,"name":"吴用","sex":"male","age":28,"hire_date":"20160311","post":"文人","salary":710000.13}
+emp16={"_id":16,"name":"萧让","sex":"male","age":18,"hire_date":"19970312","post":"文人","salary":720000}
+emp17={"_id":17,"name":"安道全","sex":"female","age":18,"hire_date":"20130311","post":"文人","salary":719000}
+emp18={"_id":18,"name":"公孙胜","sex":"male","age":18,"hire_date":"20150411","post":"文人","salary":718000}
+emp19={"_id":19,"name":"朱贵","sex":"female","age":18,"hire_date":"20140512","post":"文人","salary":717000}
+
+db.emp.insertMany([emp1,emp2,emp3,emp4,emp5,emp6,emp7,emp8,emp9,emp10,emp11,emp12,emp13,emp14,emp15,emp16,emp17,emp18,emp19])
+
+语法：
+"$group":{"_id":"$待分组字段","(根据对应操作符取)新字段名":"聚合操作符"}
+"$match":用于过滤数据，只输出符合条件的文档。
+
+0）查询post:公务员
+db.emp.aggregate([{
+    "$match":{"post":"公务员"}
+    }])
+
+1）筛选id>3的文档中，"_id":post分组，并计算salary平均值
+db.emp.aggregate([
+    {'$match':{"_id":{'$gt':3}}},
+    {'$group':{"_id":"$post","avg_sal":{"$avg":"$salary"}}}
+    ])
+
+2）根据上一条再筛选avg_sal>100000的
+db.emp.aggregate([
+{$match:{"_id":{"$gt":3}}},
+{$group:{"_id":"$post","avg_sal":{"$avg":"$salary"}}},
+{$match:{"avg_sal":{"$gt":100000}}}
+])
+
+3）分组"post":"$post"和"sex":"$sex"
+db.emp.aggregate([
+{$group:{"_id":{"post":"$post","sex":"$sex"}}}
+])
+
+4）按post分组，并求最大salary,记录为max_salary
+db.emp.aggregate([
+{$group:{"_id":"$post","max_salary":{"$max":"$salary"}}}
+])
+
+5）根据上一条增加最小salary,记录为min_salary
+db.emp.aggregate([
+{$group:{"_id":"$post","max_salary":{"$max":"$salary"},"min_salary":{"$min":"$salary"}}}
+])
+
+6）如果字段是排序后的，那么$first,$last会很有用，比用$max,$min效率高
+
+
+$sort操作符：将输入文档排序后输出
+7）post分组，并求和salary,记录为sum,再根据sum正序排序
+db.emp.aggregate([
+{$group:{"_id":"$post","sum":{"$sum":"$salary"}}},
+{$sort:{"sum":1}}
+])
+
+8）post分组，并统计出现的次数，再根据sum正序排序
+db.emp.aggregate([
+{$group:{"_id":"$post","sum":{"$sum":1}}},
+{$sort:{"sum":1}}
+])
+
+
+数组操作符:
+$push:查询所有，如果有重复都显示
+$addToset:查询并去重，如果有重复的保留一个
+
+9）分组post,重复的name也查询出来，并记录为names
+db.emp.aggregate([
+{
+    $group:{"_id":"$post","names":{"$push":"$name"}}
+}
+])
+
+10）分组post,不查询重复的name，并记录为names
+db.emp.aggregate([
+{
+    $group:{"_id":"$post","names":{"$addToSet":"$name"}}
+}
+])
+
+11）$project:投射name,post，new_age并加1
+db.emp.aggregate([
+{
+    $project:{
+        "name":1,
+        "post":1,
+        "new_age":{"$add":["$age",1]}      
+        }
+    
+    }
+])	
+
+
+
+12）$limit:取前2个（聚合管道返回的文档数）
+db.emp.aggregate([
+            {'$group': {"_id": "$post", "avg_salary": {"$avg": "$salary"}}},
+        {'$sort': {"avg_salary": 1}},
+        {'$limit': 2}
+        ])
+
+13）$skip:跳过2个（聚合管道中跳过指定数量的文档，并返回余下的文档）
+db.emp.aggregate([
+{$group:{"_id":"$post","avg_salary":{"$avg":"$salary"}}},
+{$sort:{"avg_salary":1}},
+{$skip:2}
+])
+
+14）$sample：随机取3个
+	db.emp.aggregate([
+	{$sample:{size:3}}
+	])
+
+15）$substr:截取sex[0:2]字符串
+db.emp.aggregate([
+{
+   $project:{
+   "_id":0,
+    "str":{"$substr":["$sex",0,2]}  
+    
+       }    
+    }
+])
+
+
+16）$concat:拼接字符串
+db.emp.aggregate([
+{$project:{
+    "_id":0,
+    "str":{"$concat":["$name","测试","$sex"]}   
+    }}
+])
+
+17）$toUpper:转成大写
+db.emp.aggregate([
+{
+    $project:{
+        "sex":{$toUpper:"$sex"}     
+        }
+    }
+])
+
+
+18）$toLower:转成小写
+db.emp.aggregate([
+{
+    $project:{
+        "sex":{$toLower:"$sex"}     
+        }
+    }
+])
+
+---------------------------------------------
+
+
+
+P5 005索引操作：查询的时候自动调用索引
+
+1）创建索引，并取名nameIndex
+db.emp.ensureIndex({"name":1},{"name":"nameIndex"})或
+db.emp.createIndex({"name":1},{"name":"nameIndex"})
+
+默认取名
+db.emp.ensureIndex({"name":1})
+
+2）查看索引
+db.emp.getIndexes()
+
+3）删除索引
+db.emp.dropIndexes("nameIndex")
+
+
+结束！
+
+
+
+
+
+
+
+
+
+
+
+
+
+
